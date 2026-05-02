@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f8ef;
+  --foreground: #17322a;
+  --card: #fefdf7;
+  --muted: #577166;
+  --line: #ced6be;
+  --accent: #0fa66f;
+  --accent-2: #ff8f3f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+}
+
+body {
+  min-height: 100%;
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(15, 166, 111, 0.2), transparent 30%),
+    radial-gradient(circle at 92% 80%, rgba(255, 143, 63, 0.2), transparent 26%),
+    linear-gradient(150deg, #f6f8ef 0%, #f2f4e8 55%, #ebf0df 100%);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(23, 50, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(23, 50, 42, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

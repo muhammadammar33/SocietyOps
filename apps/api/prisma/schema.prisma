@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SOCIETY_ADMIN
+  RESIDENT_OWNER
+  RESIDENT_TENANT
+  SECURITY_GUARD
+}
+
+enum PropertyType {
+  HOUSE
+  PLOT
+}
+
+enum PropertyStatus {
+  OCCUPIED
+  VACANT
+  FOR_SALE
+  FOR_RENT
+}
+
+enum BillingStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  JAZZCASH
+  EASYPAISA
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ComplaintCategory {
+  ISSUE
+  QUERY
+}
+
+enum NotificationType {
+  BILLING_DUE
+  COMPLAINT_UPDATE
+  MAINTENANCE_ALERT
+  VISITOR_APPROVAL
+  GENERAL_ANNOUNCEMENT
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+model Society {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users  User[]
+  houses House[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  emailVerifiedAt DateTime?
+  emailVerificationTokenHash String? @unique
+  emailVerificationTokenExpiresAt DateTime?
+  phone     String   @unique
+  cnic      String   @unique
+  role      UserRole
+  societyId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  society            Society?         @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  authCredential     AuthCredential?
+  ownedHouses        House[]          @relation("HouseOwner")
+  tenantAssignments  Tenant[]
+  complaints         Complaint[]
+  assignedComplaints Complaint[]      @relation("ComplaintAssignedStaff")
+  notifications      Notification[]
+}
+
+model AuthCredential {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model House {
+  id          String         @id @default(cuid())
+  societyId   String
+  type        PropertyType   @default(HOUSE)
+  block       String
+  houseNumber String
+  ownerId     String?
+  residentCount Int          @default(0)
+  status      PropertyStatus @default(OCCUPIED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  society     Society      @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  owner       User?        @relation("HouseOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  tenants     Tenant[]
+  billings    Billing[]
+  complaints  Complaint[]
+  visitorLogs VisitorLog[]
+
+  @@unique([societyId, block, houseNumber])
+}
+
+model Tenant {
+  id        String    @id @default(cuid())
+  houseId    String
+  userId     String
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([houseId, userId, startDate])
+}
+
+model Billing {
+  id        String        @id @default(cuid())
+  houseId    String
+  description String      @default("")
+  amount     Decimal       @db.Decimal(10, 2)
+  dueDate    DateTime
+  status     BillingStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  house    House      @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  payments Payment[]
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  billingId      String
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionRef String?       @unique
+  paidAt         DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  billing Billing @relation(fields: [billingId], references: [id], onDelete: Cascade)
+}
+
+model Complaint {
+  id              String          @id @default(cuid())
+  userId           String
+  houseId          String
+  description      String
+  category         ComplaintCategory @default(ISSUE)
+  status           ComplaintStatus @default(OPEN)
+  assignedStaffId  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user          User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  house         House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  assignedStaff User? @relation("ComplaintAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+}
+
+model VisitorLog {
+  id          String   @id @default(cuid())
+  houseId      String
+  visitorName  String
+  entryTime    DateTime @default(now())
+  exitTime     DateTime?
+  approvedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  status    NotificationStatus   @default(UNREAD)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

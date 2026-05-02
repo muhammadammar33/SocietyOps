@@ -1,0 +1,20 @@
+{
+  "name": "societyops",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "build:web": "npm --prefix apps/web run build",
+    "build:api": "npm --prefix apps/api run build",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.0"
+  }
+}

@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+.next/
+out/
+build/
+coverage/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma/local database
+*.db
+*.db-journal
+
+# deployment metadata
+.vercel/
+
+# secrets/certificates
+*.pem
+*.key
