@@ -16,8 +16,8 @@ export default function LoginPage() {
   );
   const api = useMemo(() => createApiClient(apiBase), [apiBase]);
 
-  const [phone, setPhone] = useState("03267744260");
-  const [password, setPassword] = useState("SuperAdmin@123");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 

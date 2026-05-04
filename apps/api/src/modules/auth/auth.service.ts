@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -282,9 +283,28 @@ export class AuthService {
     return this.me(updated.id);
   }
 
-  async changePassword(userId: string, newPassword: string): Promise<void> {
+  async changePassword(
+    actor: AuthenticatedUser,
+    userId: string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
+
+    if (actor.role === UserRole.SOCIETY_ADMIN) {
+      const isSameSociety =
+        Boolean(actor.societyId) && actor.societyId === user.societyId;
+      const canManageRole =
+        user.role === UserRole.RESIDENT_OWNER ||
+        user.role === UserRole.RESIDENT_TENANT ||
+        user.role === UserRole.SECURITY_GUARD;
+
+      if (!isSameSociety || !canManageRole) {
+        throw new ForbiddenException(
+          'You can only change passwords for residents in your society',
+        );
+      }
+    }
 
     const passwordHash = await hash(newPassword, 10);
 

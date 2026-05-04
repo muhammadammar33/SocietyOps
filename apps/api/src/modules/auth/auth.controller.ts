@@ -53,9 +53,13 @@ export class AuthController {
     return this.authService.updateProfile(user.id, body);
   }
 
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SOCIETY_ADMIN)
   @Patch('users/:id/password')
-  changePassword(@Param('id') id: string, @Body() body: ChangePasswordDto) {
-    return this.authService.changePassword(id, body.newPassword);
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user, id, body.newPassword);
   }
 }

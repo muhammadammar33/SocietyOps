@@ -34,7 +34,22 @@ export type ApiClient = {
   ) => Promise<User>;
   societies: (token: string) => Promise<Society[]>;
   society: (token: string, id: string) => Promise<Society>;
+  updateSociety: (token: string, id: string, payload: Partial<CreateSocietyPayload>) => Promise<Society>;
+  deleteSociety: (token: string, id: string) => Promise<void>;
   residents: (token: string) => Promise<Resident[]>;
+  updateResident: (
+    token: string,
+    id: string,
+    payload: Partial<{
+      name: string;
+      email: string;
+      phone: string;
+      cnic: string;
+      role: string;
+      societyId: string;
+    }>,
+  ) => Promise<Resident>;
+  deleteResident: (token: string, id: string) => Promise<void>;
   houses: (token: string) => Promise<House[]>;
   billings: (token: string) => Promise<Billing[]>;
   complaints: (token: string) => Promise<Complaint[]>;
@@ -56,6 +71,7 @@ export type ApiClient = {
     payload: { societyId: string; type?: string; block: string; houseNumber: string; ownerId?: string; status?: string },
   ) => Promise<House>;
   updateHouse: (token: string, id: string, payload: Partial<{ type: string; block: string; houseNumber: string; ownerId: string | null; status: string }>) => Promise<House>;
+  deleteHouse: (token: string, id: string) => Promise<void>;
   updateHouseResidentCount: (
     token: string,
     id: string,
@@ -176,8 +192,24 @@ export function createApiClient(apiBase: string): ApiClient {
       request<Society[]>("/societies", { method: "GET" }, token),
     society: (token, id) =>
       request<Society>(`/societies/${id}`, { method: "GET" }, token),
+    updateSociety: (token, id, payload) =>
+      request<Society>(
+        `/societies/${id}`,
+        { method: "PATCH", body: JSON.stringify(payload) },
+        token,
+      ),
+    deleteSociety: (token, id) =>
+      request<void>(`/societies/${id}`, { method: "DELETE" }, token),
     residents: (token) =>
       request<Resident[]>("/residents", { method: "GET" }, token),
+    updateResident: (token, id, payload) =>
+      request<Resident>(
+        `/residents/${id}`,
+        { method: "PATCH", body: JSON.stringify(payload) },
+        token,
+      ),
+    deleteResident: (token, id) =>
+      request<void>(`/residents/${id}`, { method: "DELETE" }, token),
     houses: (token) =>
       request<House[]>("/houses", { method: "GET" }, token),
     billings: (token) =>
@@ -211,6 +243,8 @@ export function createApiClient(apiBase: string): ApiClient {
       request<House>("/houses", { method: "POST", body: JSON.stringify(payload) }, token),
     updateHouse: (token, id, payload) =>
       request<House>(`/houses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, token),
+    deleteHouse: (token, id) =>
+      request<void>(`/houses/${id}`, { method: "DELETE" }, token),
     updateHouseResidentCount: (token, id, residentCount) =>
       request<House>(
         `/houses/${id}/resident-count`,

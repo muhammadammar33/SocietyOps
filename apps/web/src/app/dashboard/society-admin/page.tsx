@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   Billing,
   Complaint,
@@ -373,6 +380,30 @@ export default function SocietyAdminDashboardPage() {
   // Form submission state
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+  const [editingResidentId, setEditingResidentId] = useState("");
+  const [residentDraft, setResidentDraft] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    cnic: "",
+    role: "RESIDENT_OWNER",
+  });
+  const [residentActionId, setResidentActionId] = useState("");
+  const [residentActionError, setResidentActionError] = useState("");
+  const [residentActionMessage, setResidentActionMessage] = useState("");
+  const [passwordResidentId, setPasswordResidentId] = useState("");
+  const [residentPasswordDraft, setResidentPasswordDraft] = useState("");
+  const [editingHouseId, setEditingHouseId] = useState("");
+  const [houseDraft, setHouseDraft] = useState({
+    type: "HOUSE",
+    block: "",
+    houseNumber: "",
+    ownerId: "",
+    status: "OCCUPIED",
+  });
+  const [houseActionId, setHouseActionId] = useState("");
+  const [houseActionError, setHouseActionError] = useState("");
+  const [houseActionMessage, setHouseActionMessage] = useState("");
 
   // ── Load data ───────────────────────────────────────────────────────────────
 
@@ -487,6 +518,176 @@ export default function SocietyAdminDashboardPage() {
   function resetForm() {
     setFormError("");
     setFormLoading(false);
+  }
+
+  function beginEditHouse(house: House) {
+    setEditingHouseId(house.id);
+    setHouseDraft({
+      type: house.type,
+      block: house.block,
+      houseNumber: house.houseNumber,
+      ownerId: house.ownerId ?? "",
+      status: house.status,
+    });
+    setHouseActionError("");
+    setHouseActionMessage("");
+  }
+
+  async function handleUpdateHouse(houseId: string) {
+    if (!token) return;
+
+    setHouseActionId(`update-${houseId}`);
+    setHouseActionError("");
+    setHouseActionMessage("");
+
+    try {
+      const updated = await api.updateHouse(token, houseId, {
+        type: houseDraft.type,
+        block: houseDraft.block,
+        houseNumber: houseDraft.houseNumber,
+        ownerId: houseDraft.ownerId || null,
+        status: houseDraft.status,
+      });
+
+      setHouses((prev) =>
+        prev.map((house) => (house.id === houseId ? updated : house)),
+      );
+      setEditingHouseId("");
+      setHouseActionMessage("House updated successfully.");
+    } catch (err) {
+      setHouseActionError(
+        err instanceof Error ? err.message : "Failed to update house",
+      );
+    } finally {
+      setHouseActionId("");
+    }
+  }
+
+  async function handleDeleteHouse(house: House) {
+    if (!token) return;
+    if (
+      !window.confirm(
+        `Delete Block ${house.block} - #${house.houseNumber}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setHouseActionId(`delete-${house.id}`);
+    setHouseActionError("");
+    setHouseActionMessage("");
+
+    try {
+      await api.deleteHouse(token, house.id);
+      setHouses((prev) => prev.filter((item) => item.id !== house.id));
+      setHouseActionMessage("House deleted successfully.");
+    } catch (err) {
+      setHouseActionError(
+        err instanceof Error ? err.message : "Failed to delete house",
+      );
+    } finally {
+      setHouseActionId("");
+    }
+  }
+
+  function beginEditResident(resident: Resident) {
+    setEditingResidentId(resident.id);
+    setResidentDraft({
+      name: resident.name,
+      email: resident.email ?? "",
+      phone: resident.phone,
+      cnic: resident.cnic,
+      role: resident.role,
+    });
+    setResidentActionError("");
+    setResidentActionMessage("");
+  }
+
+  async function handleUpdateResident(residentId: string) {
+    if (!token || !currentUser?.societyId) return;
+
+    setResidentActionId(`update-${residentId}`);
+    setResidentActionError("");
+    setResidentActionMessage("");
+
+    try {
+      const updated = await api.updateResident(token, residentId, {
+        ...residentDraft,
+        societyId: currentUser.societyId,
+      });
+
+      setResidents((prev) =>
+        prev.map((resident) =>
+          resident.id === residentId
+            ? {
+                ...resident,
+                name: updated.name,
+                email: updated.email,
+                phone: updated.phone,
+                cnic: updated.cnic,
+                role: updated.role,
+                societyId: updated.societyId,
+              }
+            : resident,
+        ),
+      );
+      setEditingResidentId("");
+      setResidentActionMessage("Resident updated successfully.");
+    } catch (err) {
+      setResidentActionError(
+        err instanceof Error ? err.message : "Failed to update resident",
+      );
+    } finally {
+      setResidentActionId("");
+    }
+  }
+
+  async function handleDeleteResident(resident: Resident) {
+    if (!token) return;
+    if (
+      !window.confirm(
+        `Delete ${resident.name}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setResidentActionId(`delete-${resident.id}`);
+    setResidentActionError("");
+    setResidentActionMessage("");
+
+    try {
+      await api.deleteResident(token, resident.id);
+      setResidents((prev) => prev.filter((item) => item.id !== resident.id));
+      setResidentActionMessage("Resident deleted successfully.");
+    } catch (err) {
+      setResidentActionError(
+        err instanceof Error ? err.message : "Failed to delete resident",
+      );
+    } finally {
+      setResidentActionId("");
+    }
+  }
+
+  async function handleChangeResidentPassword(residentId: string) {
+    if (!token || !residentPasswordDraft) return;
+
+    setResidentActionId(`password-${residentId}`);
+    setResidentActionError("");
+    setResidentActionMessage("");
+
+    try {
+      await api.changeAdminPassword(token, residentId, residentPasswordDraft);
+      setPasswordResidentId("");
+      setResidentPasswordDraft("");
+      setResidentActionMessage("Resident password updated successfully.");
+    } catch (err) {
+      setResidentActionError(
+        err instanceof Error ? err.message : "Failed to update password",
+      );
+    } finally {
+      setResidentActionId("");
+    }
   }
 
   async function updateComplaintStatus(id: string, status: string) {
@@ -1154,11 +1355,25 @@ export default function SocietyAdminDashboardPage() {
                 </FormCard>
               )}
 
+              {houseActionError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                  {houseActionError}
+                </div>
+              )}
+              {houseActionMessage && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                  {houseActionMessage}
+                </div>
+              )}
+
               {houses.length === 0 ? (
                 <EmptyState message="No houses registered yet. Add your first house above." />
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {houses.map((h) => (
+                  {houses.map((h) => {
+                    const isEditing = editingHouseId === h.id;
+
+                    return (
                     <div
                       key={h.id}
                       className="rounded-2xl border border-(--line) bg-white p-4 shadow-sm"
@@ -1178,8 +1393,141 @@ export default function SocietyAdminDashboardPage() {
                       <p className="mt-2 text-xs text-(--muted)">
                         Added {formatDate(h.createdAt)}
                       </p>
+                      {isEditing ? (
+                        <div className="mt-4 grid gap-3 border-t border-(--line) pt-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-foreground">
+                                Type
+                              </label>
+                              <select
+                                title="Property type"
+                                value={houseDraft.type}
+                                onChange={(event) =>
+                                  setHouseDraft((draft) => ({
+                                    ...draft,
+                                    type: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-(--line) bg-background px-3 py-2 text-sm text-foreground focus:border-(--accent) focus:outline-none"
+                              >
+                                <option value="HOUSE">House</option>
+                                <option value="PLOT">Plot</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-foreground">
+                                Status
+                              </label>
+                              <select
+                                title="Property status"
+                                value={houseDraft.status}
+                                onChange={(event) =>
+                                  setHouseDraft((draft) => ({
+                                    ...draft,
+                                    status: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-(--line) bg-background px-3 py-2 text-sm text-foreground focus:border-(--accent) focus:outline-none"
+                              >
+                                <option value="OCCUPIED">Occupied</option>
+                                <option value="VACANT">Vacant</option>
+                                <option value="FOR_SALE">For Sale</option>
+                                <option value="FOR_RENT">For Rent</option>
+                              </select>
+                            </div>
+                            <InputField
+                              label="Block"
+                              id={`edit-house-block-${h.id}`}
+                              value={houseDraft.block}
+                              onChange={(event) =>
+                                setHouseDraft((draft) => ({
+                                  ...draft,
+                                  block: event.target.value,
+                                }))
+                              }
+                              required
+                            />
+                            <InputField
+                              label="Number"
+                              id={`edit-house-number-${h.id}`}
+                              value={houseDraft.houseNumber}
+                              onChange={(event) =>
+                                setHouseDraft((draft) => ({
+                                  ...draft,
+                                  houseNumber: event.target.value,
+                                }))
+                              }
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-foreground">
+                              Owner
+                            </label>
+                            <select
+                              title="Owner"
+                              value={houseDraft.ownerId}
+                              onChange={(event) =>
+                                setHouseDraft((draft) => ({
+                                  ...draft,
+                                  ownerId: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-xl border border-(--line) bg-background px-3 py-2 text-sm text-foreground focus:border-(--accent) focus:outline-none"
+                            >
+                              <option value="">No owner assigned</option>
+                              {ownerOptions.map((resident) => (
+                                <option key={resident.id} value={resident.id}>
+                                  {resident.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleUpdateHouse(h.id)}
+                              disabled={houseActionId === `update-${h.id}`}
+                              className="rounded-xl bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                              {houseActionId === `update-${h.id}`
+                                ? "Saving..."
+                                : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingHouseId("")}
+                              className="rounded-xl border border-(--line) bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex gap-2 border-t border-(--line) pt-3">
+                          <button
+                            type="button"
+                            onClick={() => beginEditHouse(h)}
+                            className="rounded-lg border border-(--line) bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-background"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteHouse(h)}
+                            disabled={houseActionId === `delete-${h.id}`}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            {houseActionId === `delete-${h.id}`
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1251,6 +1599,17 @@ export default function SocietyAdminDashboardPage() {
                 </FormCard>
               )}
 
+              {residentActionError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                  {residentActionError}
+                </div>
+              )}
+              {residentActionMessage && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+                  {residentActionMessage}
+                </div>
+              )}
+
               {residents.length === 0 ? (
                 <EmptyState message="No residents yet. Register the first one above." />
               ) : (
@@ -1264,12 +1623,18 @@ export default function SocietyAdminDashboardPage() {
                           <th className="px-4 py-3">Phone</th>
                           <th className="px-4 py-3">CNIC</th>
                           <th className="px-4 py-3">Role</th>
-                          <th className="px-4 py-3">ID</th>
+                          {/* <th className="px-4 py-3">ID</th> */}
+                          <th className="px-4 py-3">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-(--line)">
-                        {residents.map((r) => (
-                          <tr key={r.id} className="hover:bg-background/50">
+                        {residents.map((r) => {
+                          const isEditing = editingResidentId === r.id;
+                          const isCurrentUser = currentUser?.id === r.id;
+
+                          return (
+                            <Fragment key={r.id}>
+                          <tr className="hover:bg-background/50">
                             <td className="px-4 py-3 font-medium text-foreground">
                               {r.name}
                             </td>
@@ -1285,11 +1650,215 @@ export default function SocietyAdminDashboardPage() {
                             <td className="px-4 py-3">
                               <StatusBadge status={r.role} />
                             </td>
-                            <td className="px-4 py-3 font-mono text-xs text-(--muted)">
+                            {/* <td className="px-4 py-3 font-mono text-xs text-(--muted)">
                               {r.id.slice(0, 8)}…
+                            </td> */}
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => beginEditResident(r)}
+                                  className="rounded-lg border border-(--line) bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-background"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPasswordResidentId(r.id);
+                                    setResidentPasswordDraft("");
+                                    setResidentActionError("");
+                                    setResidentActionMessage("");
+                                  }}
+                                  disabled={isCurrentUser}
+                                  title={
+                                    isCurrentUser
+                                      ? "Use your profile to change your own password"
+                                      : "Change password"
+                                  }
+                                  className="rounded-lg border border-(--line) bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-background disabled:opacity-50"
+                                >
+                                  Password
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteResident(r)}
+                                  disabled={
+                                    isCurrentUser ||
+                                    residentActionId === `delete-${r.id}`
+                                  }
+                                  title={
+                                    isCurrentUser
+                                      ? "You cannot delete your own account here"
+                                      : "Delete resident"
+                                  }
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                >
+                                  {residentActionId === `delete-${r.id}`
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        ))}
+                          {passwordResidentId === r.id && (
+                            <tr className="bg-background/70">
+                              <td className="px-4 py-4" colSpan={7}>
+                                <div className="rounded-xl border border-(--line) bg-white p-4">
+                                  <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                                    <InputField
+                                      label="New Password"
+                                      id={`resident-password-${r.id}`}
+                                      type="password"
+                                      minLength={6}
+                                      value={residentPasswordDraft}
+                                      onChange={(event) =>
+                                        setResidentPasswordDraft(
+                                          event.target.value,
+                                        )
+                                      }
+                                      required
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleChangeResidentPassword(r.id)
+                                      }
+                                      disabled={
+                                        residentActionId ===
+                                          `password-${r.id}` ||
+                                        residentPasswordDraft.length < 6
+                                      }
+                                      className="rounded-xl bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                    >
+                                      {residentActionId === `password-${r.id}`
+                                        ? "Updating..."
+                                        : "Update Password"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPasswordResidentId("");
+                                        setResidentPasswordDraft("");
+                                      }}
+                                      className="rounded-xl border border-(--line) bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {isEditing && (
+                            <tr className="bg-background/70">
+                              <td className="px-4 py-4" colSpan={7}>
+                                <div className="grid gap-3 rounded-xl border border-(--line) bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
+                                  <InputField
+                                    label="Full Name"
+                                    id={`edit-res-name-${r.id}`}
+                                    value={residentDraft.name}
+                                    onChange={(event) =>
+                                      setResidentDraft((draft) => ({
+                                        ...draft,
+                                        name: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                  <InputField
+                                    label="Email"
+                                    id={`edit-res-email-${r.id}`}
+                                    type="email"
+                                    value={residentDraft.email}
+                                    onChange={(event) =>
+                                      setResidentDraft((draft) => ({
+                                        ...draft,
+                                        email: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                  <InputField
+                                    label="Phone"
+                                    id={`edit-res-phone-${r.id}`}
+                                    value={residentDraft.phone}
+                                    onChange={(event) =>
+                                      setResidentDraft((draft) => ({
+                                        ...draft,
+                                        phone: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                  <InputField
+                                    label="CNIC"
+                                    id={`edit-res-cnic-${r.id}`}
+                                    value={residentDraft.cnic}
+                                    onChange={(event) =>
+                                      setResidentDraft((draft) => ({
+                                        ...draft,
+                                        cnic: event.target.value,
+                                      }))
+                                    }
+                                    required
+                                  />
+                                  <SelectField
+                                    label="Role"
+                                    id={`edit-res-role-${r.id}`}
+                                    value={residentDraft.role}
+                                    onChange={(value) =>
+                                      setResidentDraft((draft) => ({
+                                        ...draft,
+                                        role: value,
+                                      }))
+                                    }
+                                  >
+                                    <option value="RESIDENT_OWNER">
+                                      Resident Owner
+                                    </option>
+                                    <option value="RESIDENT_TENANT">
+                                      Resident Tenant
+                                    </option>
+                                    <option value="SECURITY_GUARD">
+                                      Security Guard
+                                    </option>
+                                    {r.role === "SOCIETY_ADMIN" && (
+                                      <option value="SOCIETY_ADMIN">
+                                        Society Admin
+                                      </option>
+                                    )}
+                                  </SelectField>
+                                  <div className="flex items-end justify-end gap-2 sm:col-span-2 lg:col-span-5">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleUpdateResident(r.id)
+                                      }
+                                      disabled={
+                                        residentActionId === `update-${r.id}`
+                                      }
+                                      className="rounded-xl bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                    >
+                                      {residentActionId === `update-${r.id}`
+                                        ? "Saving..."
+                                        : "Save Changes"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingResidentId("")}
+                                      className="rounded-xl border border-(--line) bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                            </Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

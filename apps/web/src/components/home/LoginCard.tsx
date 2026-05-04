@@ -9,8 +9,8 @@ type LoginCardProps = {
 };
 
 export function LoginCard({ isLoading, onSubmit }: LoginCardProps) {
-  const [phone, setPhone] = useState("03267744260");
-  const [password, setPassword] = useState("SuperAdmin@123");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

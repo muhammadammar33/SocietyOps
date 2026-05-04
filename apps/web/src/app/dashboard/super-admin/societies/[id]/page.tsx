@@ -218,7 +218,7 @@ export default function SocietyDetailPage() {
       </header>
 
       <main className="grid-bg flex-1 px-6 py-8 sm:px-10">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto">
           {/* Society hero */}
           <div className="mb-6 rounded-2xl border border-(--line) bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
